@@ -1,39 +1,108 @@
 import rospy
+import tf
+import math
 from tf import transformations
 from gazebo_msgs.srv import SetModelState, GetModelState
 from gazebo_msgs.msg import ModelState
-from geometry_msgs.msg import PoseStamped, Quaternion, TransformStamped
+from geometry_msgs.msg import PoseStamped, Quaternion, TransformStamped, Twist
 import numpy as np
+import time
 
 class GazeboEnv():
     def __init__(self):
+        self.robot_name = "mybot_0"
         rospy.init_node('env_node')
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
-        self.goal = [1,1]
-        self._actions = dict(linear_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
+        self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
+        self.robot_state = None
+        self.state = [0,0]
+        self.goal = [1,1, np.pi]
+        self.actions = dict(linear_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
                                  angular_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
+        self.vel_cmd = [0,0]
+        self.v_max = 3
+        self.w_max = 2
+        self.time_step = 0
+        self.reward_lamba = [0.5, 0.5]
+        self.k1 = 0.5
+        self.k2 = 0.1
+    
     def excute(self, action):
-        return
+        done = False
+        vel_cmd = Twist()
+        # vel_cmd.linear.x = self.v_max*action['linear_vel']
+        # vel_cmd.angular.z = self.w_max*action['angular_vel']
+        vel_cmd.linear.x = action['linear_vel']
+        vel_cmd.angular.z = action['angular_vel']
+        # self.actions['linear_vel'] = action['linear_vel']
+        # self.actions['angular_vel'] = action['angular_vel']
+   
+        self.vel_pub.publish(vel_cmd)
+        self.vel_cmd = [vel_cmd.linear.x, vel_cmd.angular.z]
+
+        time.sleep(self.time_step)
+        rospy.wait_for_service('/gazebo/get_model_state')
+
+        try:
+            self.robot_state = self.get_state(self.robot_name, "world")
+            # print(self.robot_state.pose.position)
+        except rospy.ROSInterruptException as e:
+            print("get robot pose fail!")
+        
+        d, alpha = self.cal_state()
+        linear_reward = math.exp(-self.k1*d)
+        angular_reward_func = lambda x: math.exp(-0.1*x) if abs(x) < 90 else( -math.exp(-0.1*(180-x)) if x >=90 else -math.exp(-0.1*(180+x)))
+
+        reward = linear_reward + angular_reward_func(alpha)
+        # reward = -self.reward_lamba[0]*abs(alpha) - self.reward_lamba[1]*d
+        if d < 0.01:
+            done = True
+            reward = 10
+        self.state = [d, alpha]
+        return self.state, reward, done, {}
+
+
+    
+    def cal_state(self):
+        orientation = self.robot_state.pose.orientation
+        d_x = self.goal[0] - self.robot_state.pose.position.x
+        d_y = self.goal[1] - self.robot_state.pose.position.y
+        _, _, theta = tf.transformations.euler_from_quaternion(
+            [orientation.x, orientation.y, orientation.z, orientation.w])
+        d, alpha = self.goal2robot(d_x, d_y, theta)
+        if alpha > np.pi:
+            alpha = alpha -2*np.pi
+        if alpha < -np.pi:
+            alpha = alpha + 2*np.pi
+        return d, alpha
+
+    def goal2robot(self, d_x, d_y, theta):
+        d = math.sqrt(d_x * d_x + d_y * d_y)
+        alpha = math.atan2(d_y, d_x) - theta
+        return d, alpha
 
     def reset(self):
-        """
-        Reset environment and setup for new episode.
-        Returns:
-            initial state of reset environment.
-        """
+        # reset vel
+        vel_cmd = Twist()
+        vel_cmd.linear.x = 0
+        vel_cmd.angular.z = 0
+        self.vel_pub.publish(vel_cmd)
+        self.vel_cmd = [vel_cmd.linear.x, vel_cmd.angular.z]
         # reset robot pose
         start_position = np.random.uniform(0,2,2)
         start_angle = np.random.uniform(-np.pi, np.pi, 1)
-        start_pose = self.set_start(start_position[0], start_position[1], start_angle[0])
+        self.set_start(start_position[0], start_position[1], start_angle[0])
         # reset robot goal
-        self.goal = [1,1]
-        return
+        self.goal = [1,1, np.pi]
+        d, alpha = self.cal_state()
+        self.state = [d, alpha]
+        return self.state
 
 
     def set_start(self, x, y, theta):
         state_msg = ModelState()
-        state_msg.model_name = 'mybot_0'
+        state_msg.model_name = self.robot_name
         state_msg.pose.position.x = x
         state_msg.pose.position.y = y
         state_msg.pose.position.z = 0
@@ -42,7 +111,7 @@ class GazeboEnv():
         rospy.wait_for_service('/gazebo/set_model_state')
         try:
             resp = self.set_state(state_msg)
-            return state_msg.pose
+            self.robot_state = state_msg
         except rospy.ROSInterruptException as e:
             print("set robot start position fail!")
 
@@ -56,3 +125,21 @@ class GazeboEnv():
 if __name__ == "__main__":
     env = GazeboEnv()
     env.reset()
+    action = dict(linear_vel=0, angular_vel=0)
+    # state,reward,done ,_ = env.excute(action)
+    # print(env.state)
+    '''
+    Control with PID
+    '''
+    while 1:
+        state,reward,done ,_ = env.excute(action)
+        d = state[0]
+        alpha = state[1]
+        action["linear_vel"] = 1*d
+        action["angular_vel"] = 1*alpha
+        if done:
+            action["linear_vel"] = 0
+            action["angular_vel"] = 0
+            env.reset()
+        print(reward)
+
