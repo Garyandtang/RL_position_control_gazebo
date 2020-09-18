@@ -19,6 +19,10 @@ sudo apt-get install python3-rospkg-modules
 **remark**:
 
 git clone geometry and geometry2 by default是melodic-devel和noetic-devel, ubuntu 16.04需要换成indigo-devel
+```bash
+git clone -b <branch> <remote_repo>
+```
+
 
 我的virtualenv虚拟环境就在catkin_sim_ws下面
 source ~/catkin_sim_ws/venv/bin/activate
