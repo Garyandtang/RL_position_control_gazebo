@@ -158,7 +158,7 @@ def main():
     
     # creating environment
     env = GazeboEnv()
-    state_dim = len(env.state)
+    state_dim = env.state.shape[0]
     action_dim = len(env.actions)
     
     # if random_seed:
@@ -183,7 +183,10 @@ def main():
             time_step +=1
             # Running policy_old:
             action = ppo.select_action(state, memory)
-            state, reward, done, _ = env.excute(action)
+            
+            
+            action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+            state, reward, done, _ = env.excute(action_dict)
             
             # Saving reward and is_terminals:
             memory.rewards.append(reward)

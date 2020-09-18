@@ -16,7 +16,7 @@ class GazeboEnv():
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
         self.robot_state = None
-        self.state = [0,0]
+        self.state = np.array([0,0])
         self.goal = [1,1, np.pi]
         self.actions = dict(linear_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
                                  angular_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
@@ -59,7 +59,7 @@ class GazeboEnv():
         if d < 0.01:
             done = True
             reward = 10
-        self.state = [d, alpha]
+        self.state = np.array([d, alpha])
         return self.state, reward, done, {}
 
 
@@ -96,7 +96,7 @@ class GazeboEnv():
         # reset robot goal
         self.goal = [1,1, np.pi]
         d, alpha = self.cal_state()
-        self.state = [d, alpha]
+        self.state = np.array([d, alpha])
         return self.state
 
 
