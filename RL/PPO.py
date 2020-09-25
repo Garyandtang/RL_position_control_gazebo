@@ -144,7 +144,7 @@ def main():
     max_episodes = 10000        # max training episodes
     max_timesteps = 1500        # max timesteps in one episode
     
-    update_timestep = 4000      # update policy every n timesteps
+    update_timestep = 40      # update policy every n timesteps
     action_std = 0.5            # constant std for action distribution (Multivariate Normal)
     K_epochs = 80               # update policy for K epochs
     eps_clip = 0.2              # clip parameter for PPO
@@ -187,7 +187,7 @@ def main():
             
             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
             state, reward, done, _ = env.excute(action_dict)
-            
+            print("reward: %d")
             # Saving reward and is_terminals:
             memory.rewards.append(reward)
             memory.is_terminals.append(done)
@@ -205,14 +205,14 @@ def main():
         
         avg_length += t
         
-        # stop training if avg_reward > solved_reward
-        if running_reward > (log_interval*solved_reward):
-            print("########## Solved! ##########")
-            torch.save(ppo.policy.state_dict(), './PPO_continuous_solved_{}.pth'.format(env_name))
-            break
+        # # stop training if avg_reward > solved_reward
+        # if running_reward > (log_interval*solved_reward):
+        #     print("########## Solved! ##########")
+        #     torch.save(ppo.policy.state_dict(), './PPO_continuous_solved_{}.pth'.format(env_name))
+        #     break
         
         # save every 500 episodes
-        if i_episode % 500 == 0:
+        if i_episode % 50 == 0:
             torch.save(ppo.policy.state_dict(), './PPO_continuous_{}.pth'.format(env_name))
             
         # logging
