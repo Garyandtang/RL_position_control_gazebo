@@ -143,7 +143,7 @@ if __name__ == "__main__":
         d = state[0]
         alpha = state[1]
         action["linear_vel"] = 1*d
-        action["angular_vel"] = 1*alpha
+        action["angular_vel"] = 2*alpha
         if done:
             action["linear_vel"] = 0
             action["angular_vel"] = 0
