@@ -16,7 +16,7 @@ class GazeboEnv():
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
         self.robot_state = None # robot state is the model state obtained from GetModelState [header pose twist success status_message]
-        self.state = None # state include [d, alpha, v_t-1, w_t-1] which is based on IROS 2017
+        self.state = None # state includes [d, alpha, v_{t-1}, w_{t-1}] which is based on IROS 2017
         self.goal = [1,1, np.pi]
         self.actions = dict(linear_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
                                  angular_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
@@ -50,14 +50,16 @@ class GazeboEnv():
             print("get robot pose fail!")
         
         d, alpha = self.cal_relative_pose()
-        # # the one implemented based on high speed drifting, not pretty sure whether useful or not
+        '''
+        the one implemented based on high speed drifting, not pretty sure whether useful or not
+        '''
         # linear_reward = math.exp(-self.k1*d)
         # angular_reward_func = lambda x: math.exp(-0.1*x) if abs(x) < 90 else( -math.exp(-0.1*(180-x)) if x >=90 else -math.exp(-0.1*(180+x)))
         # reward = linear_reward + angular_reward_func(alpha)
-
-        # the one implemented based on Lei Tai 2017 IROS
-         
-        reward = self.reward_lamba[0]*(self.d_previous - d)
+        '''    
+        the one implemented based on Lei Tai 2017 IROS
+        ''' 
+        reward = self.cr*(self.d_previous - d)
         self.d_previous = d
        
         # reward = -self.reward_lamba[0]*abs(alpha) - self.reward_lamba[1]*d
@@ -100,8 +102,8 @@ class GazeboEnv():
         self.set_start(start_position[0], start_position[1], start_angle[0])
         # reset robot goal
         self.goal = [1,1, np.pi]
-        d, alpha = self.cal_state()
-        self.state = np.array([d, alpha])
+        d, alpha = self.cal_relative_pose()
+        self.state = np.array([d, alpha]+self.vel_cmd)
         self.d_previous = d
         self.vel_previous = [vel_cmd.linear.x, vel_cmd.angular.z]
         return self.state
@@ -150,9 +152,9 @@ if __name__ == "__main__":
             env.reset()
         print(reward)
 
-    # '''
-    # stochastic control
-    # '''
+    '''
+    stochastic control
+    '''
     # while 1:
     #     action['linear_vel'] = np.random.uniform(0, 1)
     #     action['angular_vel'] = np.random.uniform(-1, 1)
