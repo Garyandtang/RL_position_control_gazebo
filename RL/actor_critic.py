@@ -6,7 +6,7 @@ paper title: Virtual-to-real deep reinforcement learning: Continuous control of 
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
-from gazebo_env import GazeboEnv
+# from gazebo_env import GazeboEnv
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -41,6 +41,27 @@ class ActorBlock(nn.Module):
         x = torch.cat((x1, x2), dim=1)
         return x
 
+class CriticBlock(nn.Module):
+    def __init__(self,state_dim, action_dim):
+        super(CriticBlock, self).__init__()
+        self.state_block = nn.Sequential(
+            nn.Linear(state_dim, 512),
+            nn.ReLU()
+        )
+        self.outpu_block = nn.Sequential(
+            nn.Linear(action_dim+512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1),
+            nn.Linear(1,1)
+        )
+    def forward(self, state, action):
+        state_feature = self.state_block(state)
+        merged = torch.cat((state_feature, action), dim=1)
+        output = self.outpu_block(merged)
+        return output
+        
 class Memory:
     def __init__(self):
         self.actions = []
@@ -62,13 +83,7 @@ class ActorCritic(nn.Module):
         # action mean range -1 to 1
         self.actor =  ActorBlock(state_dim, action_dim)
         # critic
-        self.critic = nn.Sequential(
-                nn.Linear(state_dim, 64),
-                nn.Tanh(),
-                nn.Linear(64, 32),
-                nn.Tanh(),
-                nn.Linear(32, 1)
-                )
+        self.critic = CriticBlock(state_dim, action_dim)
         self.action_var = torch.full((action_dim,), action_std*action_std).to(device)
         
     def forward(self):
@@ -165,7 +180,6 @@ class PPO:
         
 def main():
     ############## Hyperparameters ##############
-    env_name = "BipedalWalker-v2"
     render = False
     solved_reward = 300         # stop training if avg_reward > solved_reward
     log_interval = 20           # print avg reward in the interval

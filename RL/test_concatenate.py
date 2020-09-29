@@ -39,11 +39,35 @@ class ActorBlock(nn.Module):
         x = torch.cat((x1, x2), dim=1)
         return x
         
+class CriticBlock(nn.Module):
+    def __init__(self,state_dim, action_dim):
+        super(CriticBlock, self).__init__()
+        self.state_block = nn.Sequential(
+            nn.Linear(state_dim, 512),
+            nn.ReLU()
+        )
+        self.outpu_block = nn.Sequential(
+            nn.Linear(action_dim+512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1),
+            nn.Linear(1,1)
+        )
+    def forward(self, state, action):
+        state_feature = self.state_block(state)
+        merged = torch.cat((state_feature, action), dim=1)
+        output = self.outpu_block(merged)
+        return output
 
-model = ActorBlock(4,2)
+actor = ActorBlock(4,2)
+critic = CriticBlock(4,2)
 state = np.array([1,1,1,1])
 state = torch.FloatTensor(state.reshape(1, -1))
-output = model(state)
+action = np.array([1,2])
+action = torch.FloatTensor(action.reshape(1,-1))
+output_action = actor(state)
+output_q_value = critic(state, action)
 
 # batch_size = 2
 # image = torch.randn(batch_size, 3, 299, 299)
