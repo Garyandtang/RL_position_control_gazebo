@@ -1,3 +1,8 @@
+'''
+reference on concatenate layer: https://discuss.pytorch.org/t/concatenate-layer-output-with-additional-input-data/20462
+reference on IROS 2017 work: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8202134
+paper title: Virtual-to-real deep reinforcement learning: Continuous control of mobile robots for mapless navigation
+'''
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
@@ -5,6 +10,36 @@ from gazebo_env import GazeboEnv
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+# pytorch implement of IROS 2017 works
+class ActorBlock(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super(ActorBlock, self).__init__()
+        self.linear_v = nn.Sequential(
+                nn.Linear(state_dim, 512),
+                nn.ReLU(),
+                nn.Linear(512, 512),
+                nn.ReLU(),
+                nn.Linear(512, 512),
+                nn.ReLU(),
+                nn.Linear(512,1),
+                nn.Sigmoid()
+                )
+        self.angular_v = nn.Sequential(
+                nn.Linear(state_dim, 512),
+                nn.ReLU(),
+                nn.Linear(512, 512),
+                nn.ReLU(),
+                nn.Linear(512, 512),
+                nn.ReLU(),
+                nn.Linear(512,1),
+                nn.Tanh()
+                )
+    def forward(self, state):
+        x1 = self.linear_v(state)
+        x2 = self.angular_v(state)
+        x = torch.cat((x1, x2), dim=1)
+        return x
 
 class Memory:
     def __init__(self):
@@ -20,18 +55,12 @@ class Memory:
         del self.logprobs[:]
         del self.rewards[:]
         del self.is_terminals[:]
+
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, action_std):
         super(ActorCritic, self).__init__()
         # action mean range -1 to 1
-        self.actor =  nn.Sequential(
-                nn.Linear(state_dim, 64),
-                nn.Tanh(),
-                nn.Linear(64, 32),
-                nn.Tanh(),
-                nn.Linear(32, action_dim),
-                nn.Tanh()
-                )
+        self.actor =  ActorBlock(state_dim, action_dim)
         # critic
         self.critic = nn.Sequential(
                 nn.Linear(state_dim, 64),
