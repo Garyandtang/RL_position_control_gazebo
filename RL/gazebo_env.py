@@ -1,3 +1,12 @@
+'''
+to run gazebo_env with python3:
+source ~/catkin_ws_garyT/ros_python3/bin/activaite
+source ~/catkin_ws_garyT/devel_isolated/setup.bash 
+to run gazebo simulator:
+source ~/catkin_ws_garyT/devel/setup.bash 
+OR (THIS MAY WORK)
+source ~/catkin_ws_garyT/devel_isolated/setup.bash 
+'''
 import rospy
 import tf
 import math

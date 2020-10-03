@@ -6,9 +6,11 @@ paper title: Virtual-to-real deep reinforcement learning: Continuous control of 
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
-# from gazebo_env import GazeboEnv
+from gazebo_env import GazeboEnv
 import numpy as np
-
+import logging
+file_name = 'ppo_position_control_64'
+logging.basicConfig(filename=file_name, level=logging.INFO)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # pytorch implement of IROS 2017 works
@@ -16,23 +18,23 @@ class ActorBlock(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(ActorBlock, self).__init__()
         self.linear_v = nn.Sequential(
-                nn.Linear(state_dim, 512),
+                nn.Linear(state_dim, 64),
                 nn.ReLU(),
-                nn.Linear(512, 512),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(512, 512),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(512,1),
+                nn.Linear(64,1),
                 nn.Sigmoid()
                 )
         self.angular_v = nn.Sequential(
-                nn.Linear(state_dim, 512),
+                nn.Linear(state_dim, 64),
                 nn.ReLU(),
-                nn.Linear(512, 512),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(512, 512),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(512,1),
+                nn.Linear(64,1),
                 nn.Tanh()
                 )
     def forward(self, state):
@@ -45,15 +47,15 @@ class CriticBlock(nn.Module):
     def __init__(self,state_dim, action_dim):
         super(CriticBlock, self).__init__()
         self.state_block = nn.Sequential(
-            nn.Linear(state_dim, 512),
+            nn.Linear(state_dim, 64),
             nn.ReLU()
         )
         self.outpu_block = nn.Sequential(
-            nn.Linear(action_dim+512, 512),
+            nn.Linear(action_dim+64, 64),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(512, 1),
+            nn.Linear(64, 1),
             nn.Linear(1,1)
         )
     def forward(self, state, action):
@@ -113,7 +115,7 @@ class ActorCritic(nn.Module):
         
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
-        state_value = self.critic(state)
+        state_value = self.critic(state,action)
         
         return action_logprobs, torch.squeeze(state_value), dist_entropy
 
@@ -132,6 +134,7 @@ class PPO:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
+        
     
     def select_action(self, state, memory):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
@@ -169,7 +172,7 @@ class PPO:
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
             loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, rewards) - 0.01*dist_entropy
-            
+            print("Loss is {}".format(loss.mean()))
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
@@ -184,15 +187,15 @@ def main():
     solved_reward = 300         # stop training if avg_reward > solved_reward
     log_interval = 20           # print avg reward in the interval
     max_episodes = 10000        # max training episodes
-    max_timesteps = 1500        # max timesteps in one episode
+    max_timesteps = 6000        # max timesteps in one episode
     
     update_timestep = 40      # update policy every n timesteps
-    action_std = 0.5            # constant std for action distribution (Multivariate Normal)
+    action_std = 0.005            # constant std for action distribution (Multivariate Normal)
     K_epochs = 80               # update policy for K epochs
     eps_clip = 0.2              # clip parameter for PPO
     gamma = 0.99                # discount factor
     
-    lr = 0.0003                 # parameters for Adam optimizer
+    lr = 0.0001                 # parameters for Adam optimizer
     betas = (0.9, 0.999)
     
     random_seed = None
@@ -200,6 +203,7 @@ def main():
     
     # creating environment
     env = GazeboEnv()
+    env.reset()
     state_dim = env.state.shape[0]
     action_dim = len(env.actions)
     
@@ -229,7 +233,7 @@ def main():
             
             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
             state, reward, done, _ = env.excute(action_dict)
-            print("reward: %d")
+            # print("reward: {}".format(reward))
             # Saving reward and is_terminals:
             memory.rewards.append(reward)
             memory.is_terminals.append(done)
@@ -243,6 +247,8 @@ def main():
             # if render:
             #     env.render()
             if done:
+                logging.info("Successfully arrive at destination")
+                print("Successfully arrive at destination")
                 break
         
         avg_length += t
@@ -255,16 +261,20 @@ def main():
         
         # save every 500 episodes
         if i_episode % 50 == 0:
-            torch.save(ppo.policy.state_dict(), './PPO_continuous_{}.pth'.format(env_name))
+            torch.save(ppo.policy.state_dict(), './PPO_position_control_64.pth')
+            logging.info('save model at {}'.format(i_episode))
             
         # logging
         if i_episode % log_interval == 0:
             avg_length = int(avg_length/log_interval)
             running_reward = int((running_reward/log_interval))
             
-            print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
+            print('Episode {}  Avg length: {}  Avg reward: {}'.format(i_episode, avg_length, running_reward))
+            logging.info('Episode {}  Avg length: {}  Avg reward: {}'.format(i_episode, avg_length, running_reward))
             running_reward = 0
             avg_length = 0
+    print("Finished {} episode training".format(max_episodes))
+    logging.info("Finished {} episode training".format(max_episodes))
             
 if __name__ == '__main__':
     main()

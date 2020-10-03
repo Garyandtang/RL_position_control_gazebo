@@ -157,6 +157,7 @@ def main():
     
     # creating environment
     env = GazeboEnv()
+    env.reset()
     state_dim = env.state.shape[0]
     action_dim = len(env.actions)
     
