@@ -35,8 +35,8 @@
     command="$(find xacro)/xacro --inorder '$(find rrbot_description)/urdf/rrbot.xacro'" />
 
   <!-- add rrbot (camera holder) -->
-  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
-    args="-urdf -model rrbot -param rrbot_description"/>
+  <!-- <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+    args="-urdf -model rrbot -param rrbot_description"/> -->
 
    <!-- add a differential wheeled robot -->
   <group>

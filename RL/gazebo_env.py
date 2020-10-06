@@ -1,6 +1,6 @@
 '''
 to run gazebo_env with python3:
-source ~/catkin_ws_garyT/ros_python3/bin/activaite
+source ~/catkin_ws_garyT/ros_py3/bin/activate
 source ~/catkin_ws_garyT/devel_isolated/setup.bash 
 to run gazebo simulator:
 source ~/catkin_ws_garyT/devel/setup.bash 
@@ -32,9 +32,9 @@ class GazeboEnv():
         self.vel_cmd = [0,0]
         self.v_max = 1
         self.w_max = 1
-        self.time_step = 0
+        self.time_step = 0.05
         self.reward_lamba = [0.5, 0.5] # hyperparameter for HIT 2019 (github) reward function
-        self.cr = 2 # hyerparameter for IROS 2017 reward function
+        self.cr = 20 # hyerparameter for IROS 2017 reward function
         self.k1 = 0.5
         self.k2 = 0.1
         self.d_previous = 0
@@ -59,6 +59,7 @@ class GazeboEnv():
             print("get robot pose fail!")
         
         d, alpha = self.cal_relative_pose()
+        
         '''
         the one implemented based on high speed drifting, not pretty sure whether useful or not
         '''
@@ -72,9 +73,14 @@ class GazeboEnv():
         self.d_previous = d
        
         # reward = -self.reward_lamba[0]*abs(alpha) - self.reward_lamba[1]*d
-        if d < 0.05:
+        # reward for finishing the test
+        if d < 0.1:
             done = True
-            reward = 10
+            reward = 500
+        # reward for moving into the virtual boundary
+        if d > 2.75:
+            done = True
+            reward = -50
         self.state = np.array([d, alpha]+self.vel_cmd)
         return self.state, reward, done, {}
 
