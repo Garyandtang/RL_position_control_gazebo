@@ -49,7 +49,7 @@ def main():
     
     memory = Memory()
     ppo = PPO(state_dim, action_dim, action_std, lr, betas, gamma, K_epochs, eps_clip)
-    ppo.policy_old.load_state_dict(torch.load('./trained_model/PPO_position_control2-10.pth'))
+    ppo.policy_old.load_state_dict(torch.load('./PPO_position_control_64_10_5_5_1500.pth'))
     print(lr,betas)
     
     # logging variables
@@ -57,16 +57,30 @@ def main():
     avg_length = 0
     time_step = 0
     state = env.reset()
-    # test once 
-    for t in range(max_timesteps):
-        action = ppo.select_action(state, memory)
-        action_dict = dict(linear_vel=action[0], angular_vel=action[1])
-        state, reward, done, _ = env.excute(action_dict)
-        # ep_reward += reward
+    # # test once 
+    # for t in range(max_timesteps):
+    #     action = ppo.select_action(state, memory)
+    #     action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+    #     state, reward, done, _ = env.excute(action_dict)
+    #     # ep_reward += reward
        
-        if done:
-            break
-    print("Total time step: {}".format(t))
+    #     if done:
+    #         break
+    # print("Total time step: {}".format(t))
+
+    for i in range(12):
+        for t in range(max_timesteps):
+            action = ppo.select_action(state, memory)
+            action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+            state, reward, done, _ = env.excute(action_dict)
+            
+            # ep_reward += reward
+        
+            if done:
+                break
+        print("Total time step: {}".format(t))
+        env.reset_test_goal()
+
     # # testing loop
     # for i_episode in range(1, max_episodes+1):
     #     state = env.reset()

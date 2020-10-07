@@ -1,0 +1,14 @@
+<launch>
+
+   <group>
+	  <arg name="x_pos_0" default="3"/>
+	  <arg name="y_pos_0" default="0"/>
+	  <arg name="z_pos_0" default="0.0"/>
+	  <param name="robot_description" command="$(find xacro)/xacro.py $(find mybot_description)/urdf/visual_marker.xacro " />
+	  <!-- <param name="robot_description" command="$(find xacro)/xacro.py $(find mybot_description)/urdf/two_wheel_robot.xacro tag_index:=Apriltag36_11_00000 ns:=robot1" /> -->
+	  <node name="visual_marker_spawn_2" pkg="gazebo_ros" type="spawn_model" args="-urdf -model robot_3 -x $(arg x_pos_0) -y $(arg y_pos_0) -z $(arg z_pos_0) -param robot_description" />
+  </group>
+
+
+
+</launch>

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+
+<robot name="visual_marker" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<xacro:property name="width" value="0.01" />
+<material name="orange">
+  <color rgba="1.0 0.423529411765 0.0392156862745 1.0"/>
+</material>
+
+<link name="base_link">
+  <visual>
+    <origin xyz="0 0 ${width/2}" />
+    <geometry>
+      <box size="${width} ${width} ${width}"/>
+     
+    </geometry>
+  </visual>
+</link>
+
+<link name="body_link">
+  <!-- <inertial>
+    <mass value="${mass1}" />
+    <origin xyz="0 0 ${width/2}" />
+    <inertia ixx="${mass1 / 12.0 * (width*width + width*width)}" ixy="0.0" ixz="0.0"
+      iyy="${mass1 / 12.0 * (width*width + width*width)}" iyz="0.0"
+      izz="${mass1 / 12.0 * (width*width + width*width)}" />
+  </inertial> -->
+
+  <collision>
+    <origin xyz="0 0 ${width/2}" />
+    <geometry>
+      <box size="${width} ${width} ${width}"/>
+      
+    </geometry>
+  </collision>
+</link>
+<joint name="base_joint" type="fixed">
+  <parent link="base_link"/>
+  <child link="body_link"/>
+</joint>
+
+
+</robot>

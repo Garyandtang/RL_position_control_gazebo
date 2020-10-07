@@ -37,13 +37,12 @@ class GazeboEnv():
         self.robot_state = None 
         self.state = None 
         self.goal = [0,0, np.pi]
-        self.actions = dict(linear_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
-                                 angular_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
-        self.vel_cmd = [0,0]
+        self.actions = dict(r_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
+                                 l_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
+        self.vel_cmd = None
         self.length = 3
         # kinetic constraint
-        self.v_max = 1
-        self.w_max = 3.14
+        self.v_max = 8
         self.time_step = 0.05
 
         # reward hyperparameter
@@ -56,12 +55,20 @@ class GazeboEnv():
 
         # testing config
         self.count = 0
+
+        # unicycle model parameter
+        self.r = 0.059
+        self.l = 0.12
+        self.J = np.array([[self.r/2, self.r/2],[self.r/self.l, -self.r/self.l]])
+
     
     def excute(self, action):
         done = False
         vel_cmd = Twist()
-        vel_cmd.linear.x = self.v_max*action['linear_vel']
-        vel_cmd.angular.z = self.w_max*action['angular_vel']
+        v = np.array([self.v_max*action['r_vel'], self.v_max*action['l_vel']])
+        self.vel_cmd = np.dot(self.J, v)
+        vel_cmd.linear.x = self.vel_cmd[0]
+        vel_cmd.angular.z = self.vel_cmd[1]
    
         self.vel_pub.publish(vel_cmd)
         self.vel_cmd = [vel_cmd.linear.x, vel_cmd.angular.z]
@@ -91,7 +98,7 @@ class GazeboEnv():
        
         # reward = -self.reward_lamba[0]*abs(alpha) - self.reward_lamba[1]*d
         # reward for finishing the test
-        if d < 0.1:
+        if d < 0.05:
             done = True
             self.count += 1
             reward = 500
@@ -173,9 +180,13 @@ class GazeboEnv():
 if __name__ == "__main__":
     env = GazeboEnv()
     env.reset()
-    action = dict(linear_vel=0, angular_vel=0)
+    action = dict(r_vel=0, l_vel=0)
     # state,reward,done ,_ = env.excute(action)
     # print(env.state)
+    r = 0.059
+    l = 0.12
+    J = np.array([[r/2, r/2],[r/l, -r/l]])
+    J_inv = np.linalg.inv(J)
     '''
     Control with PID
     '''
@@ -183,11 +194,16 @@ if __name__ == "__main__":
         state,reward,done ,_ = env.excute(action)
         d = state[0]
         alpha = state[1]
-        action["linear_vel"] = 1*d
-        action["angular_vel"] = 2*alpha
+        # v = 1*d
+        # w = 1*alpha
+        v = np.array([1.5*d, 1.7*alpha])
+        v_wheel = np.dot(J_inv, v)
+        action["r_vel"] = v_wheel[0]
+        action["l_vel"] = v_wheel[1]
+
         if done:
-            action["linear_vel"] = 0
-            action["angular_vel"] = 0
+            action["r_vel"] = 0
+            action["r_vel"] = 0
             env.reset()
         print(reward)
 

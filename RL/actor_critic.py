@@ -6,7 +6,7 @@ paper title: Virtual-to-real deep reinforcement learning: Continuous control of 
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
-from gazebo_env import GazeboEnv
+from diff_wheel_env import GazeboEnv
 import numpy as np
 import logging
 import time
@@ -37,7 +37,7 @@ class ActorBlock(nn.Module):
                 nn.Linear(64, 64),
                 nn.ReLU(),
                 nn.Linear(64,1),
-                nn.Tanh()
+                nn.Sigmoid()
                 )
     def forward(self, state):
         x1 = self.linear_v(state)
@@ -186,102 +186,6 @@ class PPO:
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
-# def main():
-#     ############## Hyperparameters ##############
-#     render = False
-#     solved_reward = 300         # stop training if avg_reward > solved_reward
-#     log_interval = 20           # print avg reward in the interval
-#     max_episodes = 10000        # max training episodes
-#     max_timesteps = 6000        # max timesteps in one episode
-    
-#     update_timestep = 40      # update policy every n timesteps
-#     action_std = 0.05            # constant std for action distribution (Multivariate Normal)
-#     K_epochs = 80               # update policy for K epochs
-#     eps_clip = 0.2              # clip parameter for PPO
-#     gamma = 0.99                # discount factor
-    
-#     lr = 0.0001                 # parameters for Adam optimizer
-#     betas = (0.9, 0.999)
-    
-#     random_seed = None
-#     #############################################
-    
-#     # creating environment
-#     env = GazeboEnv()
-#     env.reset()
-#     state_dim = env.state.shape[0]
-#     action_dim = len(env.actions)
-    
-#     # if random_seed:
-#     #     print("Random Seed: {}".format(random_seed))
-#     #     torch.manual_seed(random_seed)
-#     #     env.seed(random_seed)
-#     #     np.random.seed(random_seed)
-    
-#     memory = Memory()
-#     ppo = PPO(state_dim, action_dim, action_std, lr, betas, gamma, K_epochs, eps_clip)
-#     # ppo.policy_old.load_state_dict(torch.load('./trained_model/PPO_position_control_64.pth'))
-#     print(lr,betas)
-    
-#     # logging variables
-#     running_reward = 0
-#     avg_length = 0
-#     time_step = 0
-    
-#     # training loop
-#     for i_episode in range(1, max_episodes+1):
-#         state = env.reset()
-#         for t in range(max_timesteps):
-#             time_step +=1
-#             # Running policy_old:
-#             action = ppo.select_action(state, memory)
-            
-            
-#             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
-#             state, reward, done, _ = env.excute(action_dict)
-#             # print("reward: {}".format(reward))
-#             # Saving reward and is_terminals:
-#             memory.rewards.append(reward)
-#             memory.is_terminals.append(done)
-            
-#             # update if its time
-#             if time_step % update_timestep == 0:
-#                 ppo.update(memory)
-#                 memory.clear_memory()
-#                 time_step = 0
-#             running_reward += reward
-#             # if render:
-#             #     env.render()
-#             if done:
-#                 logging.DEBUG("Successfully arrive at destination")
-#                 log.warning("woot")
-#                 print("Successfully arrive at destination")
-#                 break
-        
-#         avg_length += t
-        
-#         # # stop training if avg_reward > solved_reward
-#         # if running_reward > (log_interval*solved_reward):
-#         #     print("########## Solved! ##########")
-#         #     torch.save(ppo.policy.state_dict(), './PPO_continuous_solved_{}.pth'.format(env_name))
-#         #     break
-        
-#         # save every 500 episodes
-#         if i_episode % 50 == 0:
-#             torch.save(ppo.policy.state_dict(), './PPO_position_control_64_2.pth')
-#             logging.info('save model at {}'.format(i_episode))
-            
-#         # logging
-#         if i_episode % log_interval == 0:
-#             avg_length = int(avg_length/log_interval)
-#             running_reward = int((running_reward/log_interval))
-            
-#             print('Episode {}  Avg length: {}  Avg reward: {}'.format(i_episode, avg_length, running_reward))
-#             logging.info('Episode {}  Avg length: {}  Avg reward: {}'.format(i_episode, avg_length, running_reward))
-#             running_reward = 0
-#             avg_length = 0
-#     print("Finished {} episode training".format(max_episodes))
-#     logging.info("Finished {} episode training".format(max_episodes))
             
 if __name__ == '__main__':
     # main()
@@ -335,7 +239,8 @@ if __name__ == '__main__':
             action = ppo.select_action(state, memory)
             
             
-            action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+            # action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+            action_dict = dict(r_vel = action[0], l_vel = action[1])
             state, reward, done, _ = env.excute(action_dict)
             print("State:{}, reward: {}, v: {}, w: {}".format(state, reward, action[0], action[1]))
             # print("reward: {}".format(reward))
@@ -359,15 +264,9 @@ if __name__ == '__main__':
         
         avg_length += t
         
-        # # stop training if avg_reward > solved_reward
-        # if running_reward > (log_interval*solved_reward):
-        #     print("########## Solved! ##########")
-        #     torch.save(ppo.policy.state_dict(), './PPO_continuous_solved_{}.pth'.format(env_name))
-        #     break
-        
         # save every 500 episodes
         if i_episode % 500 == 0:
-            torch.save(ppo.policy.state_dict(), './PPO_position_control_64_{}_{}_{}_{}.pth'.format(time.localtime(time.time()).tm_mon, time.localtime(time.time()).tm_mday,time.localtime(time.time()).tm_mday, i_episode))
+            torch.save(ppo.policy.state_dict(), './PPO_position_control_64_{}_{}_{}_{}.pth'.format(time.localtime(time.time()).tm_mon, time.localtime(time.time()).tm_mday,time.localtime(time.time()).tm_hour, i_episode))
             logging.info('save model at {}'.format(i_episode))
             
         # logging

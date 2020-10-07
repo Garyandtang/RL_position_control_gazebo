@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<robot name="visual_marker" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<link name="base_link">
+  <visual>
+    <origin xyz="0 0 ${width/2}" />
+    <geometry>
+      <box size="${width} ${width} ${width}"/>
+      <!-- <mesh filename="package://two_wheel_robot_description/meshes/twowheel_body.dae"/> -->
+    </geometry>
+  </visual>
+</link>
+  
+
+</robot>
