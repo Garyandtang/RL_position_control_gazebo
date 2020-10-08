@@ -16,7 +16,12 @@ from gazebo_msgs.msg import ModelState
 from geometry_msgs.msg import PoseStamped, Quaternion, TransformStamped, Twist
 import numpy as np
 import time
-
+# def reset_test_goal(self):
+#         goal_list = [[0,0], [0,2], [2,2], [2,0]]
+#         self.goal = goal_list[self.count%4]+[np.pi]
+#     def set_goal(self):
+#         target_position = np.random.uniform(0,self.length,2)
+#         return [target_position[0],target_position[1], np.pi]        
 class GazeboEnv():
     def __init__(self):
         # gazebo config

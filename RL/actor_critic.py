@@ -37,7 +37,7 @@ class ActorBlock(nn.Module):
                 nn.Linear(64, 64),
                 nn.ReLU(),
                 nn.Linear(64,1),
-                nn.Sigmoid()
+                nn.Tanh()
                 )
     def forward(self, state):
         x1 = self.linear_v(state)

@@ -49,7 +49,7 @@ def main():
     
     memory = Memory()
     ppo = PPO(state_dim, action_dim, action_std, lr, betas, gamma, K_epochs, eps_clip)
-    ppo.policy_old.load_state_dict(torch.load('./PPO_position_control_64_10_5_5_1500.pth'))
+    ppo.policy_old.load_state_dict(torch.load('./trained_model/64_tanh/PPO_position_control_64_10_5_5_2500.pth'))
     print(lr,betas)
     
     # logging variables

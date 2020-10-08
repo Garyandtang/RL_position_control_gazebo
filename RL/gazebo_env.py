@@ -19,42 +19,26 @@ import time
 
 class GazeboEnv():
     def __init__(self):
-        # gazebo config
         self.robot_name = "mybot_0"
         rospy.init_node('env_node')
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
-        
-        # state，target config
-        '''
-        robot state is the model state obtained from GetModelState [header pose twist success status_message]
-        state includes [d, alpha, v_{t-1}, w_{t-1}] which is based on IROS 2017
-        robot start at a random postion [length, length]
-        target postion is also random placed at [length, length]
-        need to write a target marker
-        '''
-        self.robot_state = None 
-        self.state = None 
+        self.robot_state = None # robot state is the model state obtained from GetModelState [header pose twist success status_message]
+        self.state = None # state includes [d, alpha, v_{t-1}, w_{t-1}] which is based on IROS 2017
         self.goal = [0,0, np.pi]
         self.actions = dict(linear_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
                                  angular_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
         self.vel_cmd = [0,0]
-        self.length = 3
-        # kinetic constraint
         self.v_max = 1
         self.w_max = 3.14
         self.time_step = 0.05
-
-        # reward hyperparameter
         self.reward_lamba = [0.5, 0.5] # hyperparameter for HIT 2019 (github) reward function
         self.cr = 20 # hyerparameter for IROS 2017 reward function
         self.k1 = 0.5
         self.k2 = 0.1
         self.d_previous = 0
-        self.vel_previous = [0, 0]
-
-        # testing config
+        self.vel_previous = None
         self.count = 0
     
     def excute(self, action):
@@ -93,10 +77,10 @@ class GazeboEnv():
         # reward for finishing the test
         if d < 0.1:
             done = True
-            self.count += 1
             reward = 500
+            self.count += 1
         # reward for moving into the virtual boundary
-        if abs(self.robot_state.pose.position.x-self.length/2) > 1.5*self.length or abs(self.robot_state.pose.position.y -0.5*self.length) > 1.5*self.length:
+        if d > 10:
             done = True
             reward = -50
         self.state = np.array([d, alpha]+self.vel_cmd)
@@ -130,21 +114,16 @@ class GazeboEnv():
         self.vel_pub.publish(vel_cmd)
         self.vel_cmd = [vel_cmd.linear.x, vel_cmd.angular.z]
         # reset robot pose
-        start_position = np.random.uniform(0,self.length,2)
+        start_position = np.random.uniform(0,2,2)
         start_angle = np.random.uniform(-np.pi, np.pi, 1)
         self.set_start(start_position[0], start_position[1], start_angle[0])
         # reset robot goal
-        # self.goal = self.set_goal()
-        self.goal = [0,0,np.pi]
+        self.goal = [0,0, np.pi]
         d, alpha = self.cal_relative_pose()
         self.state = np.array([d, alpha]+self.vel_cmd)
         self.d_previous = d
         self.vel_previous = [vel_cmd.linear.x, vel_cmd.angular.z]
         return self.state
-    
-    def reset_test_goal(self):
-        goal_list = [[0,0], [0,2], [2,2], [2,0]]
-        self.goal = goal_list[self.count%4]+[np.pi]
 
 
     def set_start(self, x, y, theta):
@@ -162,10 +141,13 @@ class GazeboEnv():
         except rospy.ROSInterruptException as e:
             print("set robot start position fail!")
 
-
+    def reset_test_goal(self):
+        goal_list = [[0,0], [0,2], [2,2], [2,0]]
+        self.goal = goal_list[self.count%4]+[np.pi]
+        
     def set_goal(self):
         target_position = np.random.uniform(0,self.length,2)
-        return [target_position[0],target_position[1], np.pi]
+        return [target_position[0],target_position[1], np.pi] 
 
     def kinetic_constraint():
         return
@@ -190,18 +172,3 @@ if __name__ == "__main__":
             action["angular_vel"] = 0
             env.reset()
         print(reward)
-
-    '''
-    stochastic control
-    '''
-    # while 1:
-    #     action['linear_vel'] = np.random.uniform(0, 1)
-    #     action['angular_vel'] = np.random.uniform(-1, 1)
-    #     state,reward,done ,_ = env.excute(action)
-    #     print(action, reward)
-    #     if done:
-    #         action["linear_vel"] = 0
-    #         action["angular_vel"] = 0
-    #         env.reset()
-
-
