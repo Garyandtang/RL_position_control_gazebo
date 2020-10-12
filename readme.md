@@ -1,3 +1,45 @@
+## note for reinforcement learning
+### requirement:
+Ubuntu 18.04
+Ros melodic with Gazebo (actually is full desktop version)
+Virtualenv for running python3 in ROS (tutorial in Chinese: [note](https://github.com/Garyandtang/RL_position_control_gazebo/blob/master/documents/python3_ros.md)
+python 2.7 for Gazebo simulator
+python 3.6 for reinforcement learning
+Pytorch 1.6 with CUDA 10.1
+
+### Training environment
+Intel I7-10700F
+Nvida 2060 super * 1
+32GB DD4 Ram
+### get start
+to run gazebo_env with python3:
+```
+source ~/catkin_ws_garyT/ros_py3/bin/activate
+source ~/catkin_ws_garyT/devel_isolated/setup.bash 
+```
+to run gazebo simulator:
+```
+source ~/catkin_ws_garyT/devel/setup.bash 
+```
+### Environment
+* Two environments includes 
+	* angular velocity and linear velocity model (gazeob_env.py)
+	* differential wheeled robot model (diff_wheel_env_new.py)
+
+*remark*: the model requires **float** input, using `np.float()` to change to data format.
+
+### Some tricks
+* Terminal punishment to let the agent arrives at destination with 0 speed (in progress)
+* first order reward structure (r = c*(d_t-1 d_t)) which follows the Tai Lei's IROS 2017 work
+* Safety exploration (haven't tried)
+* action smoothing 
+	* in reward (in progress)
+	* in action (不知道为啥没什么用）（可能需要调一下？）
+### Something strange 
+* output是轮子的线速度，但是state是车的线速度和角速度，却能work，我把它改成轮子的速度却没什么用？？？？）
+* 我现在不知道要怎么把action smoothing放到ppo里面，我觉得这样应该更有效
+
+
 ## Gazebo Simulation for HKUST Swarm Project
 
 A Gazebo simulation for differential wheeled robot swarm project. This work is based on:
