@@ -6,7 +6,7 @@ paper title: Virtual-to-real deep reinforcement learning: Continuous control of 
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
-from diff_wheel_env_new import GazeboEnv
+from gazebo_env import GazeboEnv
 import numpy as np
 import logging
 import time
@@ -14,7 +14,7 @@ file_name = 'testing'
 log = logging.getLogger("myapp") 
 logging.basicConfig(filename='test.log', level=logging.INFO)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-torch.set_default_tensor_type(torch.FloatTensor)
+
 # pytorch implement of IROS 2017 works
 class ActorBlock(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -22,21 +22,21 @@ class ActorBlock(nn.Module):
         self.linear_v = nn.Sequential(
                 nn.Linear(state_dim, 64),
                 nn.ReLU(),
-                nn.Linear(64, 32),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(32, 32),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(32,1),
-                nn.Tanh()
+                nn.Linear(64,1),
+                nn.Sigmoid()
                 )
         self.angular_v = nn.Sequential(
                 nn.Linear(state_dim, 64),
                 nn.ReLU(),
-                nn.Linear(64, 32),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(32, 32),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(32,1),
+                nn.Linear(64,1),
                 nn.Tanh()
                 )
     def forward(self, state):
@@ -55,9 +55,9 @@ class CriticBlock(nn.Module):
         self.outpu_block = nn.Sequential(
             nn.Linear(action_dim+64, 64),
             nn.ReLU(),
-            nn.Linear(64, 32),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(32, 1),
+            nn.Linear(64, 1),
             nn.Linear(1,1)
         )
     def forward(self, state, action):
@@ -186,7 +186,102 @@ class PPO:
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
-
+# def main():
+#     ############## Hyperparameters ##############
+#     render = False
+#     solved_reward = 300         # stop training if avg_reward > solved_reward
+#     log_interval = 20           # print avg reward in the interval
+#     max_episodes = 10000        # max training episodes
+#     max_timesteps = 6000        # max timesteps in one episode
+    
+#     update_timestep = 40      # update policy every n timesteps
+#     action_std = 0.05            # constant std for action distribution (Multivariate Normal)
+#     K_epochs = 80               # update policy for K epochs
+#     eps_clip = 0.2              # clip parameter for PPO
+#     gamma = 0.99                # discount factor
+    
+#     lr = 0.0001                 # parameters for Adam optimizer
+#     betas = (0.9, 0.999)
+    
+#     random_seed = None
+#     #############################################
+    
+#     # creating environment
+#     env = GazeboEnv()
+#     env.reset()
+#     state_dim = env.state.shape[0]
+#     action_dim = len(env.actions)
+    
+#     # if random_seed:
+#     #     print("Random Seed: {}".format(random_seed))
+#     #     torch.manual_seed(random_seed)
+#     #     env.seed(random_seed)
+#     #     np.random.seed(random_seed)
+    
+#     memory = Memory()
+#     ppo = PPO(state_dim, action_dim, action_std, lr, betas, gamma, K_epochs, eps_clip)
+#     # ppo.policy_old.load_state_dict(torch.load('./trained_model/PPO_position_control_64.pth'))
+#     print(lr,betas)
+    
+#     # logging variables
+#     running_reward = 0
+#     avg_length = 0
+#     time_step = 0
+    
+#     # training loop
+#     for i_episode in range(1, max_episodes+1):
+#         state = env.reset()
+#         for t in range(max_timesteps):
+#             time_step +=1
+#             # Running policy_old:
+#             action = ppo.select_action(state, memory)
+            
+            
+#             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+#             state, reward, done, _ = env.excute(action_dict)
+#             # print("reward: {}".format(reward))
+#             # Saving reward and is_terminals:
+#             memory.rewards.append(reward)
+#             memory.is_terminals.append(done)
+            
+#             # update if its time
+#             if time_step % update_timestep == 0:
+#                 ppo.update(memory)
+#                 memory.clear_memory()
+#                 time_step = 0
+#             running_reward += reward
+#             # if render:
+#             #     env.render()
+#             if done:
+#                 logging.DEBUG("Successfully arrive at destination")
+#                 log.warning("woot")
+#                 print("Successfully arrive at destination")
+#                 break
+        
+#         avg_length += t
+        
+#         # # stop training if avg_reward > solved_reward
+#         # if running_reward > (log_interval*solved_reward):
+#         #     print("########## Solved! ##########")
+#         #     torch.save(ppo.policy.state_dict(), './PPO_continuous_solved_{}.pth'.format(env_name))
+#         #     break
+        
+#         # save every 500 episodes
+#         if i_episode % 50 == 0:
+#             torch.save(ppo.policy.state_dict(), './PPO_position_control_64_2.pth')
+#             logging.info('save model at {}'.format(i_episode))
+            
+#         # logging
+#         if i_episode % log_interval == 0:
+#             avg_length = int(avg_length/log_interval)
+#             running_reward = int((running_reward/log_interval))
+            
+#             print('Episode {}  Avg length: {}  Avg reward: {}'.format(i_episode, avg_length, running_reward))
+#             logging.info('Episode {}  Avg length: {}  Avg reward: {}'.format(i_episode, avg_length, running_reward))
+#             running_reward = 0
+#             avg_length = 0
+#     print("Finished {} episode training".format(max_episodes))
+#     logging.info("Finished {} episode training".format(max_episodes))
             
 if __name__ == '__main__':
     # main()
@@ -198,8 +293,8 @@ if __name__ == '__main__':
     max_timesteps = 6000        # max timesteps in one episode
     
     update_timestep = 40      # update policy every n timesteps
-    action_std = 0.5            # constant std for action distribution (Multivariate Normal)
-    K_epochs = 40               # update policy for K epochs
+    action_std = 0.1            # constant std for action distribution (Multivariate Normal)
+    K_epochs = 80               # update policy for K epochs
     eps_clip = 0.2              # clip parameter for PPO
     gamma = 0.99                # discount factor
     
@@ -212,6 +307,7 @@ if __name__ == '__main__':
     # creating environment
     env = GazeboEnv()
     env.reset()
+
     state_dim = env.state.shape[0]
     action_dim = len(env.actions)
     
@@ -231,27 +327,19 @@ if __name__ == '__main__':
     avg_length = 0
     time_step = 0
     
-    # smoothing the action
-    action_prev = [0.0,0.0]
-    p = 0.4 # changing factor
-
     # training loop
     for i_episode in range(1, max_episodes+1):
         state = env.reset()
-        print("{}th episodes training".format(i_episode))
-        # print("state type: {}".format(type(state[2])))
+        print("state type: {}".format(type(state[0])))
         for t in range(max_timesteps):
             time_step +=1
             # Running policy_old:
             action = ppo.select_action(state, memory)
             
             
-            # action_dict = dict(linear_vel=p*action[0]+(1-p)*action_prev[0], angular_vel=p*action[1]+(1-p)*action_prev[1])
             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
-            # print(action_dict)
-            action_prev = [action_dict['linear_vel'], action_dict['angular_vel']]
             state, reward, done, _ = env.excute(action_dict)
-            print("State:{}, reward: {}, r_v: {}, l_v: {}".format(state, reward, action[0], action[1]))
+            print("State:{}, reward: {}, v: {}, w: {}".format(state, reward, action[0], action[1]))
             # print("reward: {}".format(reward))
             # Saving reward and is_terminals:
             memory.rewards.append(reward)
@@ -280,8 +368,8 @@ if __name__ == '__main__':
         #     break
         
         # save every 500 episodes
-        if i_episode % 100 == 0:
-            torch.save(ppo.policy.state_dict(), './PPO_position_control_diff_wheel_64_32_{}_{}_{}_{}.pth'.format(time.localtime(time.time()).tm_mon, time.localtime(time.time()).tm_mday,time.localtime(time.time()).tm_mday, i_episode))
+        if i_episode % 500 == 0:
+            torch.save(ppo.policy.state_dict(), './PPO_position_control_64_{}_{}_{}_{}.pth'.format(time.localtime(time.time()).tm_mon, time.localtime(time.time()).tm_mday,time.localtime(time.time()).tm_mday, i_episode))
             logging.info('save model at {}'.format(i_episode))
             
         # logging

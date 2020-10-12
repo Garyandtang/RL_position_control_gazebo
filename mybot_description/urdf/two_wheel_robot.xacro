@@ -4,9 +4,9 @@
 
   <xacro:property name="tag_material" value="$(arg tag_index)"/>
   <xacro:property name="PI" value="3.1415926535897931"/>
-  <xacro:property name="mass1" value="0.03" /> <!-- arbitrary value for box mass -->
-  <xacro:property name="mass2" value="0.002" /> <!-- arbitrary value for wheel mass -->
-  <xacro:property name="mass3" value="0.002" /> <!-- arbitrary value for wheel mass -->
+  <xacro:property name="mass1" value="0.3" /> <!-- arbitrary value for box mass -->
+  <xacro:property name="mass2" value="0.08" /> <!-- arbitrary value for wheel mass -->
+  <xacro:property name="mass3" value="0.08" /> <!-- arbitrary value for wheel mass -->
   <xacro:property name="width" value="0.1" /> <!-- box width -->
   <xacro:property name="radius" value="0.059" /> <!-- wheel radius -->
   <xacro:property name="length" value="0.01" />  <!-- wheel length -->

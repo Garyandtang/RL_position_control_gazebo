@@ -6,10 +6,13 @@ paper title: Virtual-to-real deep reinforcement learning: Continuous control of 
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
-from gazebo_env import GazeboEnv
+from diff_wheel_env_new import GazeboEnv
 import numpy as np
 import logging
 from actor_critic import ActorBlock, CriticBlock, ActorCritic, PPO, Memory
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 file_name = 'ppo_position_control'
 logging.basicConfig(filename=file_name, level=logging.INFO)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -41,15 +44,9 @@ def main():
     state_dim = env.state.shape[0]
     action_dim = len(env.actions)
     
-    # if random_seed:
-    #     print("Random Seed: {}".format(random_seed))
-    #     torch.manual_seed(random_seed)
-    #     env.seed(random_seed)
-    #     np.random.seed(random_seed)
-    
     memory = Memory()
     ppo = PPO(state_dim, action_dim, action_std, lr, betas, gamma, K_epochs, eps_clip)
-    ppo.policy_old.load_state_dict(torch.load('./trained_model/64_tanh/PPO_position_control_64_10_5_5_2500.pth'))
+    ppo.policy_old.load_state_dict(torch.load('./trained_model/10_11_diff_wheel_64_32/PPO_position_control_diff_wheel_64_32_10_9_9_100.pth'))
     print(lr,betas)
     
     # logging variables
@@ -57,6 +54,7 @@ def main():
     avg_length = 0
     time_step = 0
     state = env.reset()
+    path = []
     # # test once 
     # for t in range(max_timesteps):
     #     action = ppo.select_action(state, memory)
@@ -68,18 +66,21 @@ def main():
     #         break
     # print("Total time step: {}".format(t))
 
-    for i in range(12):
+    for i in range(13):
         for t in range(max_timesteps):
             action = ppo.select_action(state, memory)
             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
-            state, reward, done, _ = env.excute(action_dict)
-            
+            state, reward, done, position = env.excute(action_dict)
+            path.append(position)
             # ep_reward += reward
         
             if done:
                 break
         print("Total time step: {}".format(t))
         env.reset_test_goal()
+    x, y = zip(*path)
+    plt.plot(x,y)
+    plt.show()
 
     # # testing loop
     # for i_episode in range(1, max_episodes+1):

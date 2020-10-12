@@ -16,74 +16,53 @@ from gazebo_msgs.msg import ModelState
 from geometry_msgs.msg import PoseStamped, Quaternion, TransformStamped, Twist
 import numpy as np
 import time
-# def reset_test_goal(self):
-#         goal_list = [[0,0], [0,2], [2,2], [2,0]]
-#         self.goal = goal_list[self.count%4]+[np.pi]
-#     def set_goal(self):
-#         target_position = np.random.uniform(0,self.length,2)
-#         return [target_position[0],target_position[1], np.pi]        
+
 class GazeboEnv():
     def __init__(self):
-        # gazebo config
         self.robot_name = "mybot_0"
         rospy.init_node('env_node')
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
-        
-        # state，target config
-        '''
-        robot state is the model state obtained from GetModelState [header pose twist success status_message]
-        state includes [d, alpha, v_{t-1}, w_{t-1}] which is based on IROS 2017
-        robot start at a random postion [length, length]
-        target postion is also random placed at [length, length]
-        need to write a target marker
-        '''
-        self.robot_state = None 
-        self.state = None 
+        self.robot_state = None # robot state is the model state obtained from GetModelState [header pose twist success status_message]
+        self.state = None # state includes [d, alpha, v_{t-1}, w_{t-1}] which is based on IROS 2017
         self.goal = [0,0, np.pi]
-        self.actions = dict(r_vel=dict(shape=(), type='float', min_value=0.0, max_value=1.0),
-                                 l_vel=dict(shape=(), type='float', min_value=-1.0, max_value=1.0))
-        self.vel_cmd = None
-        self.length = 2
-        # kinetic constraint
-        self.v_max = 0.25
+        self.actions = dict(linear_vel=dict(shape=(), type='float'),
+                                 angular_vel=dict(shape=(), type='float'))
+        self.vel_cmd = [0,0]
+        self.v_max = 10
+        self.w_max = 3.14
         self.time_step = 0.05
-
-        # reward hyperparameter
         self.reward_lamba = [0.5, 0.5] # hyperparameter for HIT 2019 (github) reward function
         self.cr = 200 # hyerparameter for IROS 2017 reward function
-        self.k1 = 10.0
-        self.k2 = 10.0
+        self.k1 = 10
+        self.k2 = 10
+        self.k3 = [5,30]
         self.d_previous = 0
-        self.vel_previous = [0.0, 0.0]
-
-        # testing config
+        self.vel_previous = [0, 0]
         self.count = 0
-
+        self.pitch = 0
         # unicycle model parameter
         self.r = 0.059
         self.l = 0.12
         self.J = np.array([[self.r/2, self.r/2],[self.r/self.l, -self.r/self.l]])
 
-    
     def excute(self, action):
         done = False
         vel_cmd = Twist()
-        v = np.array([self.v_max*action['r_vel'], self.v_max*action['l_vel']])
-        print("v type: {}".format(type(v[0])))
+        v = np.array([self.v_max*action['linear_vel'], self.v_max*action['angular_vel']])
         self.vel_cmd = np.dot(self.J, v)
-        print("vel_cmd type: {}".format(type(self.vel_cmd[0])))
         if self.vel_cmd[0] > 1:
             self.vel_cmd[0] = 1
         if self.vel_cmd[1] > 3:
             self.vel_cmd[1] = 3
         vel_cmd.linear.x = self.vel_cmd[0]
         vel_cmd.angular.z = self.vel_cmd[1]
-        print("J type: {}".format(type(self.J[0,0])))
+    
         self.vel_pub.publish(vel_cmd)
-        self.vel_cmd = [vel_cmd.linear.x, vel_cmd.angular.z]
 
+        
+        # print("v type: {}".format(type(vel_cmd.linear.x)))
         time.sleep(self.time_step)
         rospy.wait_for_service('/gazebo/get_model_state')
 
@@ -104,21 +83,30 @@ class GazeboEnv():
         '''    
         the one implemented based on Lei Tai 2017 IROS
         ''' 
-        reward = self.cr*(self.d_previous - d)
+        reward = self.cr*(self.d_previous - d) - self.k3[0]*abs(self.vel_cmd[0]-self.vel_previous[0]) -self.k3[1]*abs(self.vel_cmd[1]-self.vel_previous[1])
+        reward = np.float(reward)
         self.d_previous = d
-        # print(self.vel_cmd)
+        self.vel_previous = [self.vel_cmd[0], self.vel_cmd[1]]
         # reward = -self.reward_lamba[0]*abs(alpha) - self.reward_lamba[1]*d
         # reward for finishing the test
-        if d < 0.05:
+        # punish the agent if the termial speed is not zero
+        if d < 0.1:
             done = True
+            reward = 50 - self.k1*self.vel_cmd[0] - self.k2*self.vel_cmd[1]
+            reward = np.float(reward)
+            # print(type(reward))
             self.count += 1
-            reward = -self.k1*abs(self.vel_cmd[0]) - self.k2*abs(self.vel_cmd[1])
         # reward for moving into the virtual boundary
-        if abs(self.robot_state.pose.position.x-self.length/2) > 1.5*self.length or abs(self.robot_state.pose.position.y -0.5*self.length) > 1.5*self.length:
+        if d > 2.75:
             done = True
-            reward = -5
-        self.state = np.array([d, alpha]+[v[0]/self.v_max,v[1]/self.v_max])
-        return self.state, reward, done, {}
+            reward = -50
+        if abs(self.pitch) > 0.1:
+            done = True
+            reward = -50
+        self.state = np.array([d, alpha]+list(self.vel_cmd))
+        # print(self.vel_cmd)
+        # print(self.state)
+        return self.state, reward, done, [self.robot_state.pose.position.x, self.robot_state.pose.position.y]
 
 
     
@@ -126,9 +114,10 @@ class GazeboEnv():
         orientation = self.robot_state.pose.orientation
         d_x = self.goal[0] - self.robot_state.pose.position.x
         d_y = self.goal[1] - self.robot_state.pose.position.y
-        roll, pitch, theta = tf.transformations.euler_from_quaternion(
+        roll, self.pitch, theta = tf.transformations.euler_from_quaternion(
             [orientation.x, orientation.y, orientation.z, orientation.w])
-        
+        # print("roll is{}".format(roll))
+        # print("pitch is{}".format(pitch))
         d, alpha = self.goal2robot(d_x, d_y, theta)
         if alpha > np.pi:
             alpha = alpha -2*np.pi
@@ -149,21 +138,16 @@ class GazeboEnv():
         self.vel_pub.publish(vel_cmd)
         self.vel_cmd = [vel_cmd.linear.x, vel_cmd.angular.z]
         # reset robot pose
-        start_position = np.random.uniform(0,self.length,2)
+        start_position = np.random.uniform(0,2,2)
         start_angle = np.random.uniform(-np.pi, np.pi, 1)
         self.set_start(start_position[0], start_position[1], start_angle[0])
         # reset robot goal
-        # self.goal = self.set_goal()
-        self.goal = [1,1,np.pi]
+        self.goal = [1,1, np.pi]
         d, alpha = self.cal_relative_pose()
-        self.state = np.array([d, alpha]+[0,0])
+        self.state = np.array([d, alpha]+self.vel_cmd)
         self.d_previous = d
         self.vel_previous = [vel_cmd.linear.x, vel_cmd.angular.z]
         return self.state
-    
-    def reset_test_goal(self):
-        goal_list = [[0,0], [0,2], [2,2], [2,0]]
-        self.goal = goal_list[self.count%4]+[np.pi]
 
 
     def set_start(self, x, y, theta):
@@ -181,59 +165,36 @@ class GazeboEnv():
         except rospy.ROSInterruptException as e:
             print("set robot start position fail!")
 
-
+    def reset_test_goal(self):
+        goal_list = [[0,0], [0,2], [2,2], [2,0]]
+        self.goal = goal_list[self.count%4]+[np.pi]
+        
     def set_goal(self):
         target_position = np.random.uniform(0,self.length,2)
-        return [target_position[0],target_position[1], np.pi]
+        return [target_position[0],target_position[1], np.pi] 
 
     def kinetic_constraint():
         return
 
 if __name__ == "__main__":
     env = GazeboEnv()
-    env.reset()
-    action = dict(r_vel=0, l_vel=0)
+    xx = env.reset()
+    print(xx)
+    action = dict(linear_vel=0, angular_vel=0)
     # state,reward,done ,_ = env.excute(action)
     # print(env.state)
-    r = 0.059
-    l = 0.12
-    J = np.array([[r/2, r/2],[r/l, -r/l]])
-    J_inv = np.linalg.inv(J)
     '''
     Control with PID
     '''
     while 1:
         state,reward,done ,_ = env.excute(action)
+        
         d = state[0]
         alpha = state[1]
-        # v = 1*d
-        # w = 1*alpha
-        v = np.array([1.5*d, 1.7*alpha])
-        v_wheel = np.dot(J_inv, v)
-        action["r_vel"] = v_wheel[0]
-        action["l_vel"] = v_wheel[1]
-
+        action["linear_vel"] = 1*d
+        action["angular_vel"] = 2*alpha
         if done:
-            action["r_vel"] = 0
-            action["r_vel"] = 0
+            action["linear_vel"] = 0
+            action["angular_vel"] = 0
             env.reset()
         print(reward)
-
-    '''
-    stochastic control
-    '''
-    # while 1:
-    #     action['linear_vel'] = np.random.uniform(0, 1)
-    #     action['angular_vel'] = np.random.uniform(-1, 1)
-    #     state,reward,done ,_ = env.excute(action)
-    #     print(action, reward)
-    #     if done:
-    #         action["linear_vel"] = 0
-    #         action["angular_vel"] = 0
-    #         env.reset()
-
-    #   print("old_states type: {}".format(type(old_states)))
-    #     print("old_actions type: {}".format(type(old_actions)))
-    #     print("old logprobs type: {}".format(type(old_logprobs)))
-
-
