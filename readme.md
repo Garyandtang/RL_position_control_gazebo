@@ -1,16 +1,16 @@
 ## note for reinforcement learning
 ### requirement:
-Ubuntu 18.04
-Ros melodic with Gazebo (actually is full desktop version)
-Virtualenv for running python3 in ROS (tutorial in Chinese: [note](https://github.com/Garyandtang/RL_position_control_gazebo/blob/master/documents/python3_ros.md)
-python 2.7 for Gazebo simulator
-python 3.6 for reinforcement learning
-Pytorch 1.6 with CUDA 10.1
+* Ubuntu 18.04
+* Ros melodic with Gazebo (actually is full desktop version)
+* Virtualenv for running python3 in ROS (tutorial in Chinese: [note](https://github.com/Garyandtang/RL_position_control_gazebo/blob/master/documents/python3_ros.md)
+* python 2.7 for Gazebo simulator
+* python 3.6 for reinforcement learning
+* Pytorch 1.6 with CUDA 10.1
 
 ### Training environment
-Intel I7-10700F
-Nvida 2060 super * 1
-32GB DD4 Ram
+* Intel I7-10700F
+* Nvida 2060 super * 1
+* 32GB DD4 Ram
 ### get start
 to run gazebo_env with python3:
 ```
