@@ -31,17 +31,19 @@ class GazeboEnv():
                                  angular_vel=dict(shape=(), type='float'))
         self.vel_cmd = [0,0]
         self.v_max = 10
-        self.w_max = 3.14
+        self.v_car_max = 1.5
+        self.w_max = 4
         self.time_step = 0.05
         self.reward_lamba = [0.5, 0.5] # hyperparameter for HIT 2019 (github) reward function
         self.cr = 200 # hyerparameter for IROS 2017 reward function
-        self.k1 = 10
-        self.k2 = 10
-        self.k3 = [5,30]
+        self.k1 = 5
+        self.k2 = 8
+        self.k3 = [5,8]
         self.d_previous = 0
         self.vel_previous = [0, 0]
         self.count = 0
         self.pitch = 0
+        
         # unicycle model parameter
         self.r = 0.059
         self.l = 0.12
@@ -52,10 +54,10 @@ class GazeboEnv():
         vel_cmd = Twist()
         v = np.array([self.v_max*action['linear_vel'], self.v_max*action['angular_vel']])
         self.vel_cmd = np.dot(self.J, v)
-        if self.vel_cmd[0] > 1:
-            self.vel_cmd[0] = 1
-        if self.vel_cmd[1] > 3:
-            self.vel_cmd[1] = 3
+        if self.vel_cmd[0] > 1.1:
+            self.vel_cmd[0] = 1.1
+        if self.vel_cmd[1] > 3.14:
+            self.vel_cmd[1] = 3.14
         vel_cmd.linear.x = self.vel_cmd[0]
         vel_cmd.angular.z = self.vel_cmd[1]
     
@@ -92,7 +94,7 @@ class GazeboEnv():
         # punish the agent if the termial speed is not zero
         if d < 0.1:
             done = True
-            reward = 50 - self.k1*self.vel_cmd[0] - self.k2*self.vel_cmd[1]
+            reward = 200 - self.k1*self.vel_cmd[0] - self.k2*self.vel_cmd[1]
             reward = np.float(reward)
             # print(type(reward))
             self.count += 1
@@ -100,9 +102,15 @@ class GazeboEnv():
         if d > 2.75:
             done = True
             reward = -50
-        if abs(self.pitch) > 0.1:
-            done = True
-            reward = -50
+        # if abs(self.pitch) > 0.1:
+        #     done = True
+        #     reward = -50
+        #     # self.v_car_max *= 0.99
+        #     # self.w_max *= 0.99
+        #     # if self.v_car_max < 1:
+        #     #     self.v_car_max = 1
+        #     # if self.w_max < 2.8:
+        #     #     self.w_max = 2.8
         self.state = np.array([d, alpha]+list(self.vel_cmd))
         # print(self.vel_cmd)
         # print(self.state)

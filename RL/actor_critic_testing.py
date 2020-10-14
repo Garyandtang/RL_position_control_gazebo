@@ -36,6 +36,7 @@ def main():
     betas = (0.9, 0.999)
     
     random_seed = None
+    model_name= './trained_model/10_11_diff_wheel_64_32/PPO_position_control_diff_wheel_64_32_10_10_10_7400.pth'
     #############################################
     
     # creating environment
@@ -46,7 +47,7 @@ def main():
     
     memory = Memory()
     ppo = PPO(state_dim, action_dim, action_std, lr, betas, gamma, K_epochs, eps_clip)
-    ppo.policy_old.load_state_dict(torch.load('./trained_model/10_11_diff_wheel_64_32/PPO_position_control_diff_wheel_64_32_10_9_9_100.pth'))
+    ppo.policy_old.load_state_dict(torch.load(model_name))
     print(lr,betas)
     
     # logging variables
@@ -55,6 +56,7 @@ def main():
     time_step = 0
     state = env.reset()
     path = []
+    total_t = 0
     # # test once 
     # for t in range(max_timesteps):
     #     action = ppo.select_action(state, memory)
@@ -73,11 +75,14 @@ def main():
             state, reward, done, position = env.excute(action_dict)
             path.append(position)
             # ep_reward += reward
-        
+
             if done:
                 break
         print("Total time step: {}".format(t))
+        total_t += t
         env.reset_test_goal()
+    
+    print("Avg time step: {}".format(total_t/13))
     x, y = zip(*path)
     plt.plot(x,y)
     plt.show()

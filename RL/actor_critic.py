@@ -203,7 +203,7 @@ if __name__ == '__main__':
     eps_clip = 0.2              # clip parameter for PPO
     gamma = 0.99                # discount factor
     
-    lr = 0.0001                 # parameters for Adam optimizer
+    lr = 0.0003                 # parameters for Adam optimizer
     betas = (0.9, 0.999)
     
     random_seed = None
