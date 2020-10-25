@@ -39,14 +39,22 @@
     args="-urdf -model rrbot -param rrbot_description"/> -->
 
    <!-- add a differential wheeled robot -->
-  <group>
+  <!-- <group>
 	  <arg name="x_pos_0" default="1.25"/>
 	  <arg name="y_pos_0" default="0.1"/>
 	  <arg name="z_pos_0" default="0.0"/>
 	  <param name="robot_description" command="$(find xacro)/xacro.py $(find mybot_description)/urdf/two_wheel_robot.xacro tag_index:=Apriltag36_11_00000 ns:=robot0" />
 	  <node name="robot_spawner_0" pkg="gazebo_ros" type="spawn_model" args="-urdf -model mybot_0 -x $(arg x_pos_0) -y $(arg y_pos_0) -z $(arg z_pos_0) -param robot_description" />
-  </group>
+  </group> -->
 
+  <!-- add a differential wheeled robot -->
+  <include file="$(find rrbot_gazebo)/launch/include/mybot.launch.xml">
+    <arg name="ns" value="robot1"/>
+    <arg name="x_pos_0" default="1.25"/>
+    <arg name="y_pos_0" default="0.1"/>
+    <arg name="z_pos_0" default="0.0"/>
+    <arg name="tag_index" default="Apriltag36_11_00000"/>
+  </include>
   <!--  apriltag localization -->
   <node pkg="apriltags2_ros" type="apriltags2_ros_continuous_node" name="$(arg node_namespace)" clear_params="true" output="screen" launch-prefix="$(arg launch_prefix)" >
     <!-- Remap topics from those used in code to those on the ROS network -->

@@ -34,9 +34,12 @@ def main():
     
     lr = 0.0001                 # parameters for Adam optimizer
     betas = (0.9, 0.999)
-    
+
+    # smoothing the action
+    action_prev = [0.0,0.0]
+    p = 0.8 # changing factor
     random_seed = None
-    model_name= './trained_model/10_11_diff_wheel_64_32/PPO_position_control_diff_wheel_64_32_10_10_10_7400.pth'
+    model_name= './trained_model/10_11_diff_wheel_64_32/PPO_position_control_diff_wheel_64_32_10_9_9_100.pth'
     #############################################
     
     # creating environment
@@ -72,6 +75,8 @@ def main():
         for t in range(max_timesteps):
             action = ppo.select_action(state, memory)
             action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+            # action_dict = dict(linear_vel=p*action[0]+(1-p)*action_prev[0], angular_vel=p*action[1]+(1-p)*action_prev[1])
+            action_prev = [action_dict['linear_vel'], action_dict['angular_vel']]
             state, reward, done, position = env.excute(action_dict)
             path.append(position)
             # ep_reward += reward

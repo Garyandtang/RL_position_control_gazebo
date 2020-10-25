@@ -233,7 +233,7 @@ if __name__ == '__main__':
     
     # smoothing the action
     action_prev = [0.0,0.0]
-    p = 0.4 # changing factor
+    p = 0.8 # changing factor
 
     # training loop
     for i_episode in range(1, max_episodes+1):
@@ -246,8 +246,8 @@ if __name__ == '__main__':
             action = ppo.select_action(state, memory)
             
             
-            # action_dict = dict(linear_vel=p*action[0]+(1-p)*action_prev[0], angular_vel=p*action[1]+(1-p)*action_prev[1])
-            action_dict = dict(linear_vel=action[0], angular_vel=action[1])
+            action_dict = dict(linear_vel=p*action[0]+(1-p)*action_prev[0], angular_vel=p*action[1]+(1-p)*action_prev[1])
+            # action_dict = dict(linear_vel=action[0], angular_vel=action[1])
             # print(action_dict)
             action_prev = [action_dict['linear_vel'], action_dict['angular_vel']]
             state, reward, done, _ = env.excute(action_dict)
@@ -281,6 +281,7 @@ if __name__ == '__main__':
         
         # save every 500 episodes
         if i_episode % 100 == 0:
+            # torch.save(ppo.policy.state_dict(), './PPO_position_control_diff_wheel_64_32_{}_{}_{}_{}.pth'.format(time.localtime(time.time()).tm_mon, time.localtime(time.time()).tm_mday,time.localtime(time.time()).tm_mday, i_episode))
             torch.save(ppo.policy.state_dict(), './PPO_position_control_diff_wheel_64_32_{}_{}_{}_{}.pth'.format(time.localtime(time.time()).tm_mon, time.localtime(time.time()).tm_mday,time.localtime(time.time()).tm_mday, i_episode))
             logging.info('save model at {}'.format(i_episode))
             

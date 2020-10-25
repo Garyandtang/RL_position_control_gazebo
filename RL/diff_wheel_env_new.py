@@ -19,11 +19,11 @@ import time
 
 class GazeboEnv():
     def __init__(self):
-        self.robot_name = "mybot_0"
+        self.robot_name = "robot1/mybot"
         rospy.init_node('env_node')
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
-        self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
+        self.vel_pub = rospy.Publisher("/robot1/cmd_vel", Twist, queue_size=10)
         self.robot_state = None # robot state is the model state obtained from GetModelState [header pose twist success status_message]
         self.state = None # state includes [d, alpha, v_{t-1}, w_{t-1}] which is based on IROS 2017
         self.goal = [0,0, np.pi]
@@ -32,13 +32,13 @@ class GazeboEnv():
         self.vel_cmd = [0,0]
         self.v_max = 10
         self.v_car_max = 1.5
-        self.w_max = 4
+        self.w_max = 3.14
         self.time_step = 0.05
         self.reward_lamba = [0.5, 0.5] # hyperparameter for HIT 2019 (github) reward function
         self.cr = 200 # hyerparameter for IROS 2017 reward function
-        self.k1 = 5
-        self.k2 = 8
-        self.k3 = [5,8]
+        self.k1 = 20
+        self.k2 = 20
+        self.k3 = [20,20]
         self.d_previous = 0
         self.vel_previous = [0, 0]
         self.count = 0
@@ -105,12 +105,12 @@ class GazeboEnv():
         # if abs(self.pitch) > 0.1:
         #     done = True
         #     reward = -50
-        #     # self.v_car_max *= 0.99
-        #     # self.w_max *= 0.99
-        #     # if self.v_car_max < 1:
-        #     #     self.v_car_max = 1
-        #     # if self.w_max < 2.8:
-        #     #     self.w_max = 2.8
+            # self.v_car_max *= 0.99
+            # self.w_max *= 0.99
+            # if self.v_car_max < 1:
+            #     self.v_car_max = 1
+            # if self.w_max < 2.8:
+            #     self.w_max = 2.8
         self.state = np.array([d, alpha]+list(self.vel_cmd))
         # print(self.vel_cmd)
         # print(self.state)

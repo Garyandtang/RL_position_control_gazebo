@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+    <node ns="robot1" pkg="consensus" type="task_consensus.py" name="controller_con" output="screen" />
+    <node ns="robot2" pkg="consensus" type="task_consensus.py" name="controller_con" output="screen" />
+    <node ns="robot3" pkg="consensus" type="task_consensus.py" name="controller_con" output="screen" />
+
+
+</launch>
