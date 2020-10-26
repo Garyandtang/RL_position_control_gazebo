@@ -55,15 +55,23 @@
     <arg name="z_pos_0" default="0.0"/>
     <arg name="tag_index" default="Apriltag36_11_00000"/>
   </include>
+
+  <include file="$(find rrbot_gazebo)/launch/include/mybot.launch.xml">
+    <arg name="ns" value="robot2"/>
+    <arg name="x_pos_0" default="2.25"/>
+    <arg name="y_pos_0" default="0.1"/>
+    <arg name="z_pos_0" default="0.0"/>
+    <arg name="tag_index" default="Apriltag36_11_00001"/>
+  </include>
   <!--  apriltag localization -->
-  <node pkg="apriltags2_ros" type="apriltags2_ros_continuous_node" name="$(arg node_namespace)" clear_params="true" output="screen" launch-prefix="$(arg launch_prefix)" >
-    <!-- Remap topics from those used in code to those on the ROS network -->
+  <!-- <node pkg="apriltags2_ros" type="apriltags2_ros_continuous_node" name="$(arg node_namespace)" clear_params="true" output="screen" launch-prefix="$(arg launch_prefix)" >
+    
     <remap from="image_rect" to="$(arg camera_name)/$(arg image_topic)" />
     <remap from="camera_info" to="$(arg camera_name)/camera_info" />
 
     <param name="camera_frame" type="str" value="$(arg camera_frame)" />
-    <param name="publish_tag_detections_image" type="bool" value="true" />      <!-- default: false -->
-  </node>
+    <param name="publish_tag_detections_image" type="bool" value="true" />      
+  </node> -->
 
 
   <!-- keyboard control -->
@@ -71,7 +79,7 @@
   </node> -->
 
   <!-- rviz -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find rrbot_gazebo)/rviz/show_result.rviz" />
+  <!-- <node type="rviz" name="rviz" pkg="rviz" args="-d $(find rrbot_gazebo)/rviz/show_result.rviz" /> -->
 
   <node pkg="robot_state_publisher" type="robot_state_publisher"  name="rrbot_state_publisher">
     <remap from="/robot_description" to="/rrbot_description"/>
@@ -81,10 +89,10 @@
   <node pkg="robot_state_publisher" type="robot_state_publisher"  name="robot0_state_publisher">
   </node>
 <!-- static map -->
-  <node name="map_server" pkg="map_server" type="map_server"
+  <!-- <node name="map_server" pkg="map_server" type="map_server"
     args="$(find rrbot_gazebo)/map/map_param.yaml" />
   <node pkg="tf2_ros" type="static_transform_publisher" name="world_to_map" args="0.19 1.16 0 -1.57 0 0 world map"/>
-  <node pkg="tf2_ros" type="static_transform_publisher" name="world_to_odom" args="0.0 0.0 0.0 0.0 0.0 0.0 world odom"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="world_to_odom" args="0.0 0.0 0.0 0.0 0.0 0.0 world odom"/> -->
 
   <!-- <include file="$(find mybot_navigation)/launch/includes/move_base.launch">
   </include> -->
